@@ -143,7 +143,6 @@ function initializeSettingsUI() {
     // Add event listeners for buttons
     document.getElementById('apply-settings').addEventListener('click', applySettings);
     document.getElementById('reset-settings').addEventListener('click', resetSettings);
-    document.getElementById('restart-game').addEventListener('click', restartGame);
 }
 
 // Apply settings from UI to game
@@ -238,15 +237,6 @@ function resetSettings() {
     document.getElementById('respawn-delay-value').textContent = 5;
     
     // Apply these settings
-    applySettings();
-}
-
-// Restart the game
-function restartGame() {
-    // Reset score
-    score = 0;
-    
-    // Apply current settings
     applySettings();
 }
 
@@ -805,13 +795,14 @@ function loadPlayerStats() {
 
 // Add a button to clear player stats
 document.addEventListener('DOMContentLoaded', function() {
-    const statsContainer = document.querySelector('#player-stats .stats-container');
-    if (statsContainer) {
+    const playerStatsHeader = document.querySelector('#player-stats h2');
+    if (playerStatsHeader) {
         const clearButton = document.createElement('button');
         clearButton.textContent = 'Clear Stats';
-        clearButton.style.position = 'absolute';
-        clearButton.style.right = '20px';
-        clearButton.style.top = '20px';
+        clearButton.style.marginLeft = '15px';
+        clearButton.style.fontSize = '14px';
+        clearButton.style.padding = '4px 10px';
+        clearButton.style.verticalAlign = 'middle';
         
         clearButton.addEventListener('click', function() {
             if (confirm('Are you sure you want to clear all player stats?')) {
@@ -835,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        document.getElementById('player-stats').appendChild(clearButton);
+        playerStatsHeader.appendChild(clearButton);
     }
 });
 

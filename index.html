@@ -171,6 +171,11 @@
             font-family: monospace;
         }
         
+        /* Add padding at the top of side panels to avoid overlay */
+        #data-model, #game-settings {
+            padding-top: 60px;
+        }
+        
         /* Player Stats Styles */
         #player-stats {
             width: 100%;
@@ -404,13 +409,12 @@
             <div class="setting-group">
                 <button id="apply-settings">Apply Settings</button>
                 <button id="reset-settings">Reset to Default</button>
-                <button id="restart-game">Restart Game</button>
             </div>
         </div>
     </div>
     
     <div id="player-stats">
-        <h2>Player Stats</h2>
+        <h2 style="display: flex; align-items: center;">Player Stats</h2>
         
         <div class="stats-container">
             <div class="stats-summary">
