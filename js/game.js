@@ -9,6 +9,7 @@ let INITIAL_BALL_COUNT = 15; // Number of balls to spawn initially
 let RESPAWN_DELAY = 5000; // ms to wait before respawning all balls
 const SPAWN_HEIGHT_RANGE = 200; // Range of heights above the canvas to spawn balls
 const DATA_UPDATE_INTERVAL = 500; // ms between data model updates
+const MAX_HISTORY_ITEMS = 20; // Maximum number of items to show in the performance graph
 
 // Game settings
 const gameSettings = {
@@ -25,6 +26,20 @@ const gameSettings = {
     ballSize: 30,
     gravity: 10,
     respawnDelay: 5 // in seconds
+};
+
+// Player stats
+const playerStats = {
+    total: 0,
+    correct: 0,
+    incorrect: 0,
+    operations: {
+        addition: { total: 0, correct: 0 },
+        subtraction: { total: 0, correct: 0 },
+        multiplication: { total: 0, correct: 0 },
+        division: { total: 0, correct: 0 }
+    },
+    history: [] // Array of objects with { question, answer, isCorrect, operation }
 };
 
 // Box2D shortcuts for Box2DWeb
@@ -80,8 +95,14 @@ function init() {
     // Initialize game settings UI
     initializeSettingsUI();
     
+    // Initialize player stats
+    updatePlayerStatsDisplay();
+    
     // Start the game loop
     requestAnimationFrame(gameLoop);
+    
+    // Load player stats from localStorage if available
+    loadPlayerStats();
 }
 
 // Initialize settings UI and event listeners
@@ -550,8 +571,16 @@ function handleClick(event) {
         
         // If clicked on a ball
         if (distance <= BALL_RADIUS / SCALE) {
+            // Get current question details
+            const currentQuestion = questions[currentQuestionIndex];
+            const questionText = currentQuestion.question;
+            const correctAnswer = currentQuestion.answer;
+            const operation = getOperationFromQuestion(questionText);
+            
             // Check if it's the correct answer
-            if (ball.answer === questions[currentQuestionIndex].answer) {
+            const isCorrect = ball.answer === correctAnswer;
+            
+            if (isCorrect) {
                 // Remove the ball
                 world.DestroyBody(ball.body);
                 balls.splice(i, 1);
@@ -575,10 +604,240 @@ function handleClick(event) {
                 needToRespawnBalls = true;
                 respawnTimer = RESPAWN_DELAY;
             }
+            
+            // Update player stats
+            updatePlayerStats(questionText, ball.answer, isCorrect, operation);
+            
             break;
         }
     }
 }
+
+// Extract operation type from question
+function getOperationFromQuestion(question) {
+    if (question.includes('+')) return 'addition';
+    if (question.includes('-')) return 'subtraction';
+    if (question.includes('*')) return 'multiplication';
+    if (question.includes('/')) return 'division';
+    return 'unknown';
+}
+
+// Update player stats with question result
+function updatePlayerStats(question, answer, isCorrect, operation) {
+    // Update total stats
+    playerStats.total++;
+    if (isCorrect) {
+        playerStats.correct++;
+    } else {
+        playerStats.incorrect++;
+    }
+    
+    // Update operation-specific stats
+    if (playerStats.operations[operation]) {
+        playerStats.operations[operation].total++;
+        if (isCorrect) {
+            playerStats.operations[operation].correct++;
+        }
+    }
+    
+    // Add to history
+    playerStats.history.push({
+        question,
+        answer,
+        isCorrect,
+        operation,
+        timestamp: Date.now()
+    });
+    
+    // Limit history size
+    if (playerStats.history.length > MAX_HISTORY_ITEMS) {
+        playerStats.history.shift(); // Remove oldest item
+    }
+    
+    // Update the display
+    updatePlayerStatsDisplay();
+    
+    // Save to localStorage
+    savePlayerStats();
+}
+
+// Update the player stats display
+function updatePlayerStatsDisplay() {
+    // Update summary stats
+    document.getElementById('total-questions').textContent = playerStats.total;
+    document.getElementById('correct-answers').textContent = playerStats.correct;
+    document.getElementById('incorrect-answers').textContent = playerStats.incorrect;
+    
+    // Calculate accuracy
+    const accuracy = playerStats.total > 0 ? 
+        Math.round((playerStats.correct / playerStats.total) * 100) : 0;
+    document.getElementById('accuracy').textContent = accuracy + '%';
+    
+    // Update operation stats
+    updateOperationStats('addition');
+    updateOperationStats('subtraction');
+    updateOperationStats('multiplication');
+    updateOperationStats('division');
+    
+    // Update performance graph
+    updatePerformanceGraph();
+}
+
+// Update stats for a specific operation
+function updateOperationStats(operation) {
+    const stats = playerStats.operations[operation];
+    const correctElement = document.getElementById(`${operation}-correct`);
+    const totalElement = document.getElementById(`${operation}-total`);
+    const progressElement = document.getElementById(`${operation}-progress`);
+    
+    if (correctElement && totalElement && progressElement) {
+        correctElement.textContent = stats.correct;
+        totalElement.textContent = `/ ${stats.total}`;
+        
+        // Calculate and set progress percentage
+        const percentage = stats.total > 0 ? 
+            Math.round((stats.correct / stats.total) * 100) : 0;
+        progressElement.style.width = `${percentage}%`;
+    }
+}
+
+// Update the performance graph
+function updatePerformanceGraph() {
+    const graphContainer = document.getElementById('performance-graph');
+    if (!graphContainer) return;
+    
+    // Clear previous graph
+    graphContainer.innerHTML = '';
+    
+    // If no history, show a message
+    if (playerStats.history.length === 0) {
+        graphContainer.innerHTML = '<div style="text-align:center;margin-top:50px;color:#666;">No question history yet. Start playing to see your performance!</div>';
+        return;
+    }
+    
+    // Calculate container dimensions
+    const containerWidth = graphContainer.parentElement.clientWidth - 20; // Subtract padding
+    const containerHeight = graphContainer.parentElement.clientHeight - 60; // Subtract space for legend and title
+    
+    // Calculate bar width based on available space and history items
+    const barWidth = Math.min(30, (containerWidth / playerStats.history.length) - 8);
+    
+    // Create bars for each history item
+    playerStats.history.forEach((item, index) => {
+        const bar = document.createElement('div');
+        bar.className = `graph-bar ${item.isCorrect ? 'correct' : 'incorrect'}`;
+        
+        // Set bar height (taller for correct answers)
+        const barHeight = item.isCorrect ? containerHeight * 0.8 : containerHeight * 0.5;
+        bar.style.height = `${barHeight}px`;
+        bar.style.width = `${barWidth}px`;
+        
+        // Position the bar
+        bar.style.position = 'absolute';
+        bar.style.bottom = '0';
+        bar.style.left = `${(index * (barWidth + 8)) + 4}px`; // Space bars evenly
+        
+        // Add a label with the operation symbol
+        const label = document.createElement('div');
+        label.className = 'graph-bar-label';
+        
+        let symbol = '';
+        switch (item.operation) {
+            case 'addition': symbol = '+'; break;
+            case 'subtraction': symbol = '-'; break;
+            case 'multiplication': symbol = '×'; break;
+            case 'division': symbol = '÷'; break;
+        }
+        
+        label.textContent = symbol;
+        bar.appendChild(label);
+        
+        // Add tooltip with question details
+        bar.title = `Question: ${item.question}\nYour answer: ${item.answer}\nResult: ${item.isCorrect ? 'Correct' : 'Incorrect'}`;
+        
+        graphContainer.appendChild(bar);
+    });
+}
+
+// Save player stats to localStorage
+function savePlayerStats() {
+    try {
+        localStorage.setItem('mathogenPlayerStats', JSON.stringify(playerStats));
+    } catch (e) {
+        console.error('Failed to save player stats:', e);
+    }
+}
+
+// Load player stats from localStorage
+function loadPlayerStats() {
+    try {
+        const savedStats = localStorage.getItem('mathogenPlayerStats');
+        if (savedStats) {
+            const parsedStats = JSON.parse(savedStats);
+            
+            // Update playerStats with saved data
+            playerStats.total = parsedStats.total || 0;
+            playerStats.correct = parsedStats.correct || 0;
+            playerStats.incorrect = parsedStats.incorrect || 0;
+            
+            // Update operation stats
+            if (parsedStats.operations) {
+                for (const op in parsedStats.operations) {
+                    if (playerStats.operations[op]) {
+                        playerStats.operations[op].total = parsedStats.operations[op].total || 0;
+                        playerStats.operations[op].correct = parsedStats.operations[op].correct || 0;
+                    }
+                }
+            }
+            
+            // Update history
+            if (Array.isArray(parsedStats.history)) {
+                playerStats.history = parsedStats.history.slice(-MAX_HISTORY_ITEMS);
+            }
+            
+            // Update the display
+            updatePlayerStatsDisplay();
+        }
+    } catch (e) {
+        console.error('Failed to load player stats:', e);
+    }
+}
+
+// Add a button to clear player stats
+document.addEventListener('DOMContentLoaded', function() {
+    const statsContainer = document.querySelector('#player-stats .stats-container');
+    if (statsContainer) {
+        const clearButton = document.createElement('button');
+        clearButton.textContent = 'Clear Stats';
+        clearButton.style.position = 'absolute';
+        clearButton.style.right = '20px';
+        clearButton.style.top = '20px';
+        
+        clearButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all player stats?')) {
+                // Reset player stats
+                playerStats.total = 0;
+                playerStats.correct = 0;
+                playerStats.incorrect = 0;
+                
+                for (const op in playerStats.operations) {
+                    playerStats.operations[op].total = 0;
+                    playerStats.operations[op].correct = 0;
+                }
+                
+                playerStats.history = [];
+                
+                // Update display
+                updatePlayerStatsDisplay();
+                
+                // Clear localStorage
+                localStorage.removeItem('mathogenPlayerStats');
+            }
+        });
+        
+        document.getElementById('player-stats').appendChild(clearButton);
+    }
+});
 
 // Draw a ball
 function drawBall(ball) {
