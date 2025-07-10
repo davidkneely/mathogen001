@@ -1,4 +1,4 @@
-# Math Ball Pop - WebGL Game with Box2D Physics
+# Mathogen Ball Pop - WebGL Game with Box2D Physics
 
 A fun educational game where players need to answer simple math questions by clicking on the falling balls with the correct answers.
 
@@ -34,4 +34,4 @@ This game uses:
 
 ## Credits
 
-Created as a learning project using Box2DWeb, a JavaScript port of the Box2D physics engine. # mathogen001
+Created Box2DWeb, a JavaScript port of the Box2D physics engine. # mathogen001
