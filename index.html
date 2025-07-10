@@ -20,20 +20,25 @@
             width: 100%;
             height: calc(100vh - 60px);
         }
-        #data-model {
+        #data-model, #game-settings {
             width: 300px;
             background-color: #fff;
-            border-right: 1px solid #ccc;
             padding: 10px;
             overflow-y: auto;
             font-size: 14px;
         }
-        #data-model h2 {
+        #data-model {
+            border-right: 1px solid #ccc;
+        }
+        #game-settings {
+            border-left: 1px solid #ccc;
+        }
+        #data-model h2, #game-settings h2 {
             margin-top: 0;
             border-bottom: 1px solid #ccc;
             padding-bottom: 5px;
         }
-        #data-model h3 {
+        #data-model h3, #game-settings h3 {
             margin-top: 15px;
             margin-bottom: 5px;
             color: #333;
@@ -106,6 +111,65 @@
         .current-question {
             background-color: #ffffcc;
         }
+        .setting-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .setting-item {
+            margin-bottom: 8px;
+        }
+        .setting-label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: bold;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .slider-container {
+            width: 100%;
+            margin-top: 5px;
+        }
+        .slider {
+            width: 100%;
+        }
+        .slider-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -133,6 +197,85 @@
         
         <div id="game-area">
             <canvas id="canvas"></canvas>
+        </div>
+        
+        <div id="game-settings">
+            <h2>GameSettings</h2>
+            
+            <div class="setting-group">
+                <h3>Question Types</h3>
+                <div class="setting-item">
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addition" name="operation" value="addition" checked>
+                            <label for="addition">Addition</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="subtraction" name="operation" value="subtraction" checked>
+                            <label for="subtraction">Subtraction</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="multiplication" name="operation" value="multiplication" checked>
+                            <label for="multiplication">Multiplication</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="division" name="operation" value="division">
+                            <label for="division">Division</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <h3>Number Range</h3>
+                <div class="setting-item">
+                    <label class="setting-label" for="min-number">Minimum Number:</label>
+                    <input type="number" id="min-number" name="min-number" min="1" max="100" value="1">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label" for="max-number">Maximum Number:</label>
+                    <input type="number" id="max-number" name="max-number" min="1" max="100" value="10">
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <h3>Game Configuration</h3>
+                <div class="setting-item">
+                    <label class="setting-label" for="question-count">Number of Questions:</label>
+                    <input type="number" id="question-count" name="question-count" min="3" max="20" value="7">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label" for="ball-count">Number of Balls:</label>
+                    <input type="number" id="ball-count" name="ball-count" min="5" max="30" value="15">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label" for="ball-size">Ball Size:</label>
+                    <div class="slider-container">
+                        <input type="range" min="10" max="50" value="30" class="slider" id="ball-size">
+                        <span class="slider-value" id="ball-size-value">30</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label" for="gravity">Gravity:</label>
+                    <div class="slider-container">
+                        <input type="range" min="1" max="20" value="10" class="slider" id="gravity">
+                        <span class="slider-value" id="gravity-value">10</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label" for="respawn-delay">Respawn Delay (seconds):</label>
+                    <div class="slider-container">
+                        <input type="range" min="1" max="10" value="5" class="slider" id="respawn-delay">
+                        <span class="slider-value" id="respawn-delay-value">5</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <button id="apply-settings">Apply Settings</button>
+                <button id="reset-settings">Reset to Default</button>
+                <button id="restart-game">Restart Game</button>
+            </div>
         </div>
     </div>
     

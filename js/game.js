@@ -1,15 +1,31 @@
-// Game constants
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
-const BALL_RADIUS = 30;
-const BALL_SPAWN_INTERVAL = 2000; // ms
-const GRAVITY = 10;
-const QUESTION_COUNT = 7;
+// Game constants - default values, can be changed via settings
+let CANVAS_WIDTH = 800;
+let CANVAS_HEIGHT = 600;
+let BALL_RADIUS = 30;
+let GRAVITY = 10;
+let QUESTION_COUNT = 7;
 const SCALE = 30; // Box2D works in meters, we need to convert to pixels
-const INITIAL_BALL_COUNT = 15; // Number of balls to spawn initially
-const RESPAWN_DELAY = 5000; // ms to wait before respawning all balls
+let INITIAL_BALL_COUNT = 15; // Number of balls to spawn initially
+let RESPAWN_DELAY = 5000; // ms to wait before respawning all balls
 const SPAWN_HEIGHT_RANGE = 200; // Range of heights above the canvas to spawn balls
 const DATA_UPDATE_INTERVAL = 500; // ms between data model updates
+
+// Game settings
+const gameSettings = {
+    operations: {
+        addition: true,
+        subtraction: true,
+        multiplication: true,
+        division: false
+    },
+    minNumber: 1,
+    maxNumber: 10,
+    questionCount: 7,
+    ballCount: 15,
+    ballSize: 30,
+    gravity: 10,
+    respawnDelay: 5 // in seconds
+};
 
 // Box2D shortcuts for Box2DWeb
 const b2Vec2 = Box2D.Common.Math.b2Vec2;
@@ -61,8 +77,217 @@ function init() {
     // Initialize data model view
     updateDataModelView();
     
+    // Initialize game settings UI
+    initializeSettingsUI();
+    
     // Start the game loop
     requestAnimationFrame(gameLoop);
+}
+
+// Initialize settings UI and event listeners
+function initializeSettingsUI() {
+    // Set initial values from gameSettings
+    document.getElementById('addition').checked = gameSettings.operations.addition;
+    document.getElementById('subtraction').checked = gameSettings.operations.subtraction;
+    document.getElementById('multiplication').checked = gameSettings.operations.multiplication;
+    document.getElementById('division').checked = gameSettings.operations.division;
+    
+    document.getElementById('min-number').value = gameSettings.minNumber;
+    document.getElementById('max-number').value = gameSettings.maxNumber;
+    document.getElementById('question-count').value = gameSettings.questionCount;
+    document.getElementById('ball-count').value = gameSettings.ballCount;
+    
+    document.getElementById('ball-size').value = gameSettings.ballSize;
+    document.getElementById('ball-size-value').textContent = gameSettings.ballSize;
+    
+    document.getElementById('gravity').value = gameSettings.gravity;
+    document.getElementById('gravity-value').textContent = gameSettings.gravity;
+    
+    document.getElementById('respawn-delay').value = gameSettings.respawnDelay;
+    document.getElementById('respawn-delay-value').textContent = gameSettings.respawnDelay;
+    
+    // Add event listeners for sliders
+    document.getElementById('ball-size').addEventListener('input', function() {
+        document.getElementById('ball-size-value').textContent = this.value;
+    });
+    
+    document.getElementById('gravity').addEventListener('input', function() {
+        document.getElementById('gravity-value').textContent = this.value;
+    });
+    
+    document.getElementById('respawn-delay').addEventListener('input', function() {
+        document.getElementById('respawn-delay-value').textContent = this.value;
+    });
+    
+    // Add event listeners for buttons
+    document.getElementById('apply-settings').addEventListener('click', applySettings);
+    document.getElementById('reset-settings').addEventListener('click', resetSettings);
+    document.getElementById('restart-game').addEventListener('click', restartGame);
+}
+
+// Apply settings from UI to game
+function applySettings() {
+    // Get operation settings
+    gameSettings.operations.addition = document.getElementById('addition').checked;
+    gameSettings.operations.subtraction = document.getElementById('subtraction').checked;
+    gameSettings.operations.multiplication = document.getElementById('multiplication').checked;
+    gameSettings.operations.division = document.getElementById('division').checked;
+    
+    // Validate that at least one operation is selected
+    if (!gameSettings.operations.addition && 
+        !gameSettings.operations.subtraction && 
+        !gameSettings.operations.multiplication && 
+        !gameSettings.operations.division) {
+        alert('Please select at least one operation type.');
+        document.getElementById('addition').checked = true;
+        gameSettings.operations.addition = true;
+    }
+    
+    // Get number range
+    gameSettings.minNumber = parseInt(document.getElementById('min-number').value);
+    gameSettings.maxNumber = parseInt(document.getElementById('max-number').value);
+    
+    // Validate min/max numbers
+    if (gameSettings.minNumber >= gameSettings.maxNumber) {
+        alert('Minimum number must be less than maximum number.');
+        gameSettings.minNumber = 1;
+        gameSettings.maxNumber = 10;
+        document.getElementById('min-number').value = 1;
+        document.getElementById('max-number').value = 10;
+    }
+    
+    // Get other settings
+    gameSettings.questionCount = parseInt(document.getElementById('question-count').value);
+    gameSettings.ballCount = parseInt(document.getElementById('ball-count').value);
+    gameSettings.ballSize = parseInt(document.getElementById('ball-size').value);
+    gameSettings.gravity = parseInt(document.getElementById('gravity').value);
+    gameSettings.respawnDelay = parseInt(document.getElementById('respawn-delay').value);
+    
+    // Apply settings to game variables
+    QUESTION_COUNT = gameSettings.questionCount;
+    INITIAL_BALL_COUNT = gameSettings.ballCount;
+    BALL_RADIUS = gameSettings.ballSize;
+    GRAVITY = gameSettings.gravity;
+    RESPAWN_DELAY = gameSettings.respawnDelay * 1000; // Convert to milliseconds
+    
+    // Update world gravity
+    world.SetGravity(new b2Vec2(0, GRAVITY));
+    
+    // Generate new questions based on new settings
+    generateQuestions();
+    currentQuestionIndex = 0;
+    updateQuestionDisplay();
+    
+    // Respawn balls with new settings
+    needToRespawnBalls = true;
+    respawnTimer = 0; // Respawn immediately
+    
+    // Update data model view
+    updateDataModelView();
+}
+
+// Reset settings to default values
+function resetSettings() {
+    gameSettings.operations.addition = true;
+    gameSettings.operations.subtraction = true;
+    gameSettings.operations.multiplication = true;
+    gameSettings.operations.division = false;
+    gameSettings.minNumber = 1;
+    gameSettings.maxNumber = 10;
+    gameSettings.questionCount = 7;
+    gameSettings.ballCount = 15;
+    gameSettings.ballSize = 30;
+    gameSettings.gravity = 10;
+    gameSettings.respawnDelay = 5;
+    
+    // Update UI
+    document.getElementById('addition').checked = true;
+    document.getElementById('subtraction').checked = true;
+    document.getElementById('multiplication').checked = true;
+    document.getElementById('division').checked = false;
+    document.getElementById('min-number').value = 1;
+    document.getElementById('max-number').value = 10;
+    document.getElementById('question-count').value = 7;
+    document.getElementById('ball-count').value = 15;
+    document.getElementById('ball-size').value = 30;
+    document.getElementById('ball-size-value').textContent = 30;
+    document.getElementById('gravity').value = 10;
+    document.getElementById('gravity-value').textContent = 10;
+    document.getElementById('respawn-delay').value = 5;
+    document.getElementById('respawn-delay-value').textContent = 5;
+    
+    // Apply these settings
+    applySettings();
+}
+
+// Restart the game
+function restartGame() {
+    // Reset score
+    score = 0;
+    
+    // Apply current settings
+    applySettings();
+}
+
+// Generate math questions based on current settings
+function generateQuestions() {
+    questions = [];
+    const operations = [];
+    
+    if (gameSettings.operations.addition) operations.push('+');
+    if (gameSettings.operations.subtraction) operations.push('-');
+    if (gameSettings.operations.multiplication) operations.push('*');
+    if (gameSettings.operations.division) operations.push('/');
+    
+    // Generate the requested number of questions
+    for (let i = 0; i < gameSettings.questionCount; i++) {
+        questions.push(generateNewQuestion(operations));
+    }
+}
+
+// Generate a new question to replace a completed one
+function generateNewQuestion(operations = null) {
+    if (!operations) {
+        operations = [];
+        if (gameSettings.operations.addition) operations.push('+');
+        if (gameSettings.operations.subtraction) operations.push('-');
+        if (gameSettings.operations.multiplication) operations.push('*');
+        if (gameSettings.operations.division) operations.push('/');
+    }
+    
+    const op = operations[Math.floor(Math.random() * operations.length)];
+    
+    let a, b, answer;
+    
+    switch (op) {
+        case '+':
+            a = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            b = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            answer = a + b;
+            break;
+        case '-':
+            // Ensure a >= b for subtraction to avoid negative answers
+            b = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            a = b + Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            answer = a - b;
+            break;
+        case '*':
+            a = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            b = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            answer = a * b;
+            break;
+        case '/':
+            // Ensure division results in whole numbers
+            b = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            answer = Math.floor(Math.random() * (gameSettings.maxNumber - gameSettings.minNumber + 1)) + gameSettings.minNumber;
+            a = b * answer;
+            break;
+    }
+    
+    return {
+        question: `${a} ${op} ${b} = ?`,
+        answer: answer.toString()
+    };
 }
 
 // Create boundary walls
@@ -97,50 +322,6 @@ function createBox(x, y, width, height, isStatic) {
     body.CreateFixture(fixDef);
     
     return body;
-}
-
-// Generate math questions
-function generateQuestions() {
-    questions = [
-        { question: "1 + 1 = ?", answer: "2" },
-        { question: "2 + 2 = ?", answer: "4" },
-        { question: "3 + 3 = ?", answer: "6" },
-        { question: "4 + 4 = ?", answer: "8" },
-        { question: "5 + 5 = ?", answer: "10" },
-        { question: "6 + 4 = ?", answer: "10" },
-        { question: "7 + 3 = ?", answer: "10" }
-    ];
-}
-
-// Generate a new question to replace a completed one
-function generateNewQuestion() {
-    const operations = ['+', '-', '*'];
-    const op = operations[Math.floor(Math.random() * operations.length)];
-    
-    let a, b, answer;
-    
-    switch (op) {
-        case '+':
-            a = Math.floor(Math.random() * 10) + 1;
-            b = Math.floor(Math.random() * 10) + 1;
-            answer = a + b;
-            break;
-        case '-':
-            a = Math.floor(Math.random() * 10) + 5;
-            b = Math.floor(Math.random() * 5) + 1;
-            answer = a - b;
-            break;
-        case '*':
-            a = Math.floor(Math.random() * 5) + 1;
-            b = Math.floor(Math.random() * 5) + 1;
-            answer = a * b;
-            break;
-    }
-    
-    return {
-        question: `${a} ${op} ${b} = ?`,
-        answer: answer.toString()
-    };
 }
 
 // Update the question display
