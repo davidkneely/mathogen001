@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Ball Pop</title>
+    <title>Mathogen</title>
     <style>
         body {
             margin: 0;
@@ -11,6 +11,46 @@
             overflow: hidden;
             background-color: #f0f0f0;
             font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        #game-container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            height: calc(100vh - 60px);
+        }
+        #data-model {
+            width: 300px;
+            background-color: #fff;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        #data-model h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        #data-model h3 {
+            margin-top: 15px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        #data-model pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        #game-area {
+            flex-grow: 1;
+            position: relative;
         }
         #canvas {
             display: block;
@@ -39,6 +79,33 @@
             color: #333;
             margin: 5px 0 0 0;
         }
+        .data-item {
+            margin-bottom: 10px;
+        }
+        .data-label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .data-value {
+            font-family: monospace;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 5px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: left;
+            font-size: 12px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .current-question {
+            background-color: #ffffcc;
+        }
     </style>
 </head>
 <body>
@@ -46,7 +113,28 @@
         <p id="question">Question: 1 + 1 = ?</p>
         <p id="score">Score: 0</p>
     </div>
-    <canvas id="canvas"></canvas>
+    
+    <div id="game-container">
+        <div id="data-model">
+            <h2>DataModel</h2>
+            
+            <h3>Current Question</h3>
+            <div id="current-question-display"></div>
+            
+            <h3>Questions Array</h3>
+            <div id="questions-array"></div>
+            
+            <h3>Balls</h3>
+            <div id="balls-info"></div>
+            
+            <h3>Game State</h3>
+            <div id="game-state"></div>
+        </div>
+        
+        <div id="game-area">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
     
     <!-- Box2D physics library -->
     <script src="js/box2d.min.js"></script>

@@ -9,6 +9,7 @@ const SCALE = 30; // Box2D works in meters, we need to convert to pixels
 const INITIAL_BALL_COUNT = 15; // Number of balls to spawn initially
 const RESPAWN_DELAY = 5000; // ms to wait before respawning all balls
 const SPAWN_HEIGHT_RANGE = 200; // Range of heights above the canvas to spawn balls
+const DATA_UPDATE_INTERVAL = 500; // ms between data model updates
 
 // Box2D shortcuts for Box2DWeb
 const b2Vec2 = Box2D.Common.Math.b2Vec2;
@@ -29,6 +30,7 @@ let currentQuestionIndex = 0;
 let score = 0;
 let needToRespawnBalls = false;
 let respawnTimer = 0;
+let lastDataUpdateTime = 0;
 
 // Initialize the game
 function init() {
@@ -55,6 +57,9 @@ function init() {
     
     // Spawn initial set of balls
     spawnInitialBalls();
+    
+    // Initialize data model view
+    updateDataModelView();
     
     // Start the game loop
     requestAnimationFrame(gameLoop);
@@ -238,6 +243,115 @@ function getRandomColor() {
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
+// Update the data model view
+function updateDataModelView() {
+    // Update current question
+    const currentQuestionDisplay = document.getElementById('current-question-display');
+    const currentQuestion = questions[currentQuestionIndex];
+    currentQuestionDisplay.innerHTML = `
+        <table>
+            <tr>
+                <th>Index</th>
+                <th>Question</th>
+                <th>Answer</th>
+            </tr>
+            <tr>
+                <td>${currentQuestionIndex}</td>
+                <td>${currentQuestion.question}</td>
+                <td>${currentQuestion.answer}</td>
+            </tr>
+        </table>
+    `;
+    
+    // Update questions array
+    const questionsArrayDisplay = document.getElementById('questions-array');
+    let questionsHtml = `
+        <table>
+            <tr>
+                <th>Index</th>
+                <th>Question</th>
+                <th>Answer</th>
+            </tr>
+    `;
+    
+    questions.forEach((q, index) => {
+        const isCurrentClass = index === currentQuestionIndex ? 'class="current-question"' : '';
+        questionsHtml += `
+            <tr ${isCurrentClass}>
+                <td>${index}</td>
+                <td>${q.question}</td>
+                <td>${q.answer}</td>
+            </tr>
+        `;
+    });
+    
+    questionsHtml += '</table>';
+    questionsArrayDisplay.innerHTML = questionsHtml;
+    
+    // Update balls info
+    const ballsInfoDisplay = document.getElementById('balls-info');
+    ballsInfoDisplay.innerHTML = `
+        <div class="data-item">
+            <span class="data-label">Total Balls:</span>
+            <span class="data-value">${balls.length}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Answer Distribution:</span>
+        </div>
+    `;
+    
+    // Count balls by answer
+    const answerCounts = {};
+    balls.forEach(ball => {
+        if (!answerCounts[ball.answer]) {
+            answerCounts[ball.answer] = 0;
+        }
+        answerCounts[ball.answer]++;
+    });
+    
+    // Create table for answer distribution
+    let answerDistHtml = `
+        <table>
+            <tr>
+                <th>Answer</th>
+                <th>Count</th>
+                <th>Is Current Answer</th>
+            </tr>
+    `;
+    
+    for (const answer in answerCounts) {
+        const isCurrentAnswer = answer === currentQuestion.answer;
+        const isCurrentClass = isCurrentAnswer ? 'class="current-question"' : '';
+        answerDistHtml += `
+            <tr ${isCurrentClass}>
+                <td>${answer}</td>
+                <td>${answerCounts[answer]}</td>
+                <td>${isCurrentAnswer ? 'Yes' : 'No'}</td>
+            </tr>
+        `;
+    }
+    
+    answerDistHtml += '</table>';
+    ballsInfoDisplay.innerHTML += answerDistHtml;
+    
+    // Update game state
+    const gameStateDisplay = document.getElementById('game-state');
+    gameStateDisplay.innerHTML = `
+        <div class="data-item">
+            <span class="data-label">Score:</span>
+            <span class="data-value">${score}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Need To Respawn:</span>
+            <span class="data-value">${needToRespawnBalls}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Respawn Timer:</span>
+            <span class="data-value">${respawnTimer > 0 ? (respawnTimer / 1000).toFixed(1) + 's' : 'N/A'}</span>
+        </div>
+    `;
+}
+
 // Handle click events
 function handleClick(event) {
     // Get click position relative to canvas
@@ -272,6 +386,9 @@ function handleClick(event) {
                 
                 // Update the display
                 updateQuestionDisplay();
+                
+                // Update data model view immediately after state change
+                updateDataModelView();
                 
                 // Schedule a respawn of all balls
                 needToRespawnBalls = true;
@@ -325,6 +442,12 @@ function gameLoop(timestamp) {
     
     // Draw all balls
     balls.forEach(drawBall);
+    
+    // Update data model view periodically
+    if (timestamp - lastDataUpdateTime > DATA_UPDATE_INTERVAL) {
+        updateDataModelView();
+        lastDataUpdateTime = timestamp;
+    }
     
     // Continue the game loop
     requestAnimationFrame(gameLoop);
