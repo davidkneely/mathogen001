@@ -98,6 +98,9 @@ function init() {
     // Initialize player stats
     updatePlayerStatsDisplay();
     
+    // Initialize toggle button
+    initializeToggleButton();
+    
     // Start the game loop
     requestAnimationFrame(gameLoop);
     
@@ -829,6 +832,41 @@ document.addEventListener('DOMContentLoaded', function() {
         playerStatsHeader.appendChild(clearButton);
     }
 });
+
+// Initialize toggle button functionality
+function initializeToggleButton() {
+    const toggleButton = document.getElementById('toggle-button');
+    
+    if (toggleButton) {
+        toggleButton.addEventListener('click', function() {
+            const body = document.body;
+            
+            // Toggle the class
+            if (body.classList.contains('panels-hidden')) {
+                body.classList.remove('panels-hidden');
+                toggleButton.classList.add('active');
+                
+                // Update data model view when panels are shown
+                updateDataModelView();
+                updatePlayerStatsDisplay();
+            } else {
+                body.classList.add('panels-hidden');
+                toggleButton.classList.remove('active');
+            }
+            
+            // No need to resize canvas - keep original dimensions
+        });
+    }
+}
+
+// Resize canvas to fit the game area - only called during initial setup, not when toggling panels
+function resizeCanvas() {
+    if (canvas) {
+        // Keep canvas at fixed dimensions
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+    }
+}
 
 // Draw a ball
 function drawBall(ball) {

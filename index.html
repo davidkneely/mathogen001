@@ -19,6 +19,7 @@
             flex-direction: row;
             width: 100%;
             height: calc(100vh - 60px - 300px); /* Reduced to make room for stats */
+            transition: all 0.3s ease;
         }
         #data-model, #game-settings {
             width: 300px;
@@ -26,6 +27,7 @@
             padding: 10px;
             overflow-y: auto;
             font-size: 14px;
+            transition: all 0.3s ease;
         }
         #data-model {
             border-right: 1px solid #ccc;
@@ -56,10 +58,14 @@
         #game-area {
             flex-grow: 1;
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #canvas {
             display: block;
-            margin: 0 auto;
+            width: 800px;
+            height: 600px;
             border: 1px solid #ccc;
         }
         #game-info {
@@ -184,6 +190,7 @@
             box-sizing: border-box;
             height: 300px;
             border-top: 1px solid #ccc;
+            transition: all 0.3s ease;
         }
         
         .stats-container {
@@ -305,17 +312,78 @@
             font-size: 12px;
             margin-top: 2px;
         }
+        
+        /* Toggle button styles */
+        #toggle-button {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 20;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        #toggle-button:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+        
+        #toggle-button.active {
+            transform: rotate(180deg);
+        }
+        
+        /* Hide panels by default */
+        .panels-hidden #data-model {
+            margin-left: -300px;
+            opacity: 0;
+        }
+        
+        .panels-hidden #game-settings {
+            margin-right: -300px;
+            opacity: 0;
+        }
+        
+        .panels-hidden #player-stats {
+            margin-bottom: -300px;
+            opacity: 0;
+        }
+        
+        /* Ensure game container doesn't change height when panels are hidden */
+        .panels-hidden #game-container {
+            height: calc(100vh - 60px);
+        }
+        
+        .gear-icon {
+            width: 24px;
+            height: 24px;
+        }
     </style>
 </head>
-<body>
+<body class="panels-hidden">
     <div id="game-info">
         <p id="question">Question: 1 + 1 = ?</p>
         <p id="score">Score: 0</p>
     </div>
     
+    <button id="toggle-button" title="Toggle Settings">
+        <svg class="gear-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </button>
+    
     <div id="game-container">
         <div id="data-model">
-            <h2>DataModel</h2>
+            <h2 style="display: flex; align-items: center;">DataModel</h2>
             
             <h3>Current Question</h3>
             <div id="current-question-display"></div>
