@@ -352,34 +352,10 @@ function spawnInitialBalls() {
     // Clear any existing balls
     clearAllBalls();
     
-    // Get all possible answers from current questions
-    const possibleAnswers = questions.map(q => q.answer);
-    
-    // Make sure the current answer is included
-    const currentAnswer = questions[currentQuestionIndex].answer;
-    
-    // Calculate how many of each answer type to create
-    const ballsPerAnswer = Math.floor(INITIAL_BALL_COUNT / possibleAnswers.length);
-    const extraBalls = INITIAL_BALL_COUNT - (ballsPerAnswer * possibleAnswers.length);
-    
-    // Create balls for each answer
-    for (let i = 0; i < possibleAnswers.length; i++) {
-        const answer = possibleAnswers[i];
-        // Create more balls for the current answer to increase chances
-        const count = answer === currentAnswer ? 
-            ballsPerAnswer + extraBalls : 
-            ballsPerAnswer;
-        
-        for (let j = 0; j < count; j++) {
-            createBallWithAnswer(answer);
-        }
-    }
-    
-    // Ensure at least one ball has the current answer
-    let hasCurrentAnswer = balls.some(ball => ball.answer === currentAnswer);
-    if (!hasCurrentAnswer) {
-        createBallWithAnswer(currentAnswer);
-    }
+    // Create exactly one ball for each question in the questions array
+    questions.forEach((question, index) => {
+        createBallWithAnswer(question.answer);
+    });
     
     needToRespawnBalls = false;
 }
