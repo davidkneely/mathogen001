@@ -1,12 +1,10 @@
 // Game constants - default values, can be changed via settings
 let CANVAS_WIDTH = 800;
 let CANVAS_HEIGHT = 600;
-let BALL_RADIUS = 30;
+let BALL_RADIUS = 41;
 let GRAVITY = 10;
 let QUESTION_COUNT = 7;
 const SCALE = 30; // Box2D works in meters, we need to convert to pixels
-let INITIAL_BALL_COUNT = 15; // Number of balls to spawn initially
-let RESPAWN_DELAY = 5000; // ms to wait before respawning all balls
 const SPAWN_HEIGHT_RANGE = 200; // Range of heights above the canvas to spawn balls
 const DATA_UPDATE_INTERVAL = 500; // ms between data model updates
 const MAX_HISTORY_ITEMS = 20; // Maximum number of items to show in the performance graph
@@ -22,10 +20,8 @@ const gameSettings = {
     minNumber: 1,
     maxNumber: 10,
     questionCount: 7,
-    ballCount: 15,
-    ballSize: 30,
-    gravity: 10,
-    respawnDelay: 5 // in seconds
+    ballSize: 41,
+    gravity: 10
 };
 
 // Player stats
@@ -59,8 +55,6 @@ let lastSpawnTime = 0;
 let questions = [];
 let currentQuestionIndex = 0;
 let score = 0;
-let needToRespawnBalls = false;
-let respawnTimer = 0;
 let lastDataUpdateTime = 0;
 
 // Initialize the game
@@ -119,16 +113,12 @@ function initializeSettingsUI() {
     document.getElementById('min-number').value = gameSettings.minNumber;
     document.getElementById('max-number').value = gameSettings.maxNumber;
     document.getElementById('question-count').value = gameSettings.questionCount;
-    document.getElementById('ball-count').value = gameSettings.ballCount;
     
     document.getElementById('ball-size').value = gameSettings.ballSize;
     document.getElementById('ball-size-value').textContent = gameSettings.ballSize;
     
     document.getElementById('gravity').value = gameSettings.gravity;
     document.getElementById('gravity-value').textContent = gameSettings.gravity;
-    
-    document.getElementById('respawn-delay').value = gameSettings.respawnDelay;
-    document.getElementById('respawn-delay-value').textContent = gameSettings.respawnDelay;
     
     // Add event listeners for sliders
     document.getElementById('ball-size').addEventListener('input', function() {
@@ -137,10 +127,6 @@ function initializeSettingsUI() {
     
     document.getElementById('gravity').addEventListener('input', function() {
         document.getElementById('gravity-value').textContent = this.value;
-    });
-    
-    document.getElementById('respawn-delay').addEventListener('input', function() {
-        document.getElementById('respawn-delay-value').textContent = this.value;
     });
     
     // Add event listeners for buttons
@@ -181,17 +167,13 @@ function applySettings() {
     
     // Get other settings
     gameSettings.questionCount = parseInt(document.getElementById('question-count').value);
-    gameSettings.ballCount = parseInt(document.getElementById('ball-count').value);
     gameSettings.ballSize = parseInt(document.getElementById('ball-size').value);
     gameSettings.gravity = parseInt(document.getElementById('gravity').value);
-    gameSettings.respawnDelay = parseInt(document.getElementById('respawn-delay').value);
     
     // Apply settings to game variables
     QUESTION_COUNT = gameSettings.questionCount;
-    INITIAL_BALL_COUNT = gameSettings.ballCount;
     BALL_RADIUS = gameSettings.ballSize;
     GRAVITY = gameSettings.gravity;
-    RESPAWN_DELAY = gameSettings.respawnDelay * 1000; // Convert to milliseconds
     
     // Update world gravity
     world.SetGravity(new b2Vec2(0, GRAVITY));
@@ -202,8 +184,7 @@ function applySettings() {
     updateQuestionDisplay();
     
     // Respawn balls with new settings
-    needToRespawnBalls = true;
-    respawnTimer = 0; // Respawn immediately
+    spawnInitialBalls();
     
     // Update data model view
     updateDataModelView();
@@ -218,10 +199,8 @@ function resetSettings() {
     gameSettings.minNumber = 1;
     gameSettings.maxNumber = 10;
     gameSettings.questionCount = 7;
-    gameSettings.ballCount = 15;
-    gameSettings.ballSize = 30;
+    gameSettings.ballSize = 41;
     gameSettings.gravity = 10;
-    gameSettings.respawnDelay = 5;
     
     // Update UI
     document.getElementById('addition').checked = true;
@@ -231,13 +210,10 @@ function resetSettings() {
     document.getElementById('min-number').value = 1;
     document.getElementById('max-number').value = 10;
     document.getElementById('question-count').value = 7;
-    document.getElementById('ball-count').value = 15;
-    document.getElementById('ball-size').value = 30;
-    document.getElementById('ball-size-value').textContent = 30;
+    document.getElementById('ball-size').value = 41;
+    document.getElementById('ball-size-value').textContent = 41;
     document.getElementById('gravity').value = 10;
     document.getElementById('gravity-value').textContent = 10;
-    document.getElementById('respawn-delay').value = 5;
-    document.getElementById('respawn-delay-value').textContent = 5;
     
     // Apply these settings
     applySettings();
@@ -304,6 +280,14 @@ function generateNewQuestion(operations = null) {
     };
 }
 
+// Shuffle array using Fisher-Yates algorithm
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
 // Create boundary walls
 function createBoundaries() {
     // Ground (bottom)
@@ -356,8 +340,6 @@ function spawnInitialBalls() {
     questions.forEach((question, index) => {
         createBallWithAnswer(question.answer);
     });
-    
-    needToRespawnBalls = false;
 }
 
 // Clear all existing balls
@@ -514,11 +496,11 @@ function updateDataModelView() {
         </div>
         <div class="data-item">
             <span class="data-label">Need To Respawn:</span>
-            <span class="data-value">${needToRespawnBalls}</span>
+            <span class="data-value">N/A</span>
         </div>
         <div class="data-item">
             <span class="data-label">Respawn Timer:</span>
-            <span class="data-value">${respawnTimer > 0 ? (respawnTimer / 1000).toFixed(1) + 's' : 'N/A'}</span>
+            <span class="data-value">N/A</span>
         </div>
     `;
 }
@@ -557,21 +539,27 @@ function handleClick(event) {
                 // Increase score
                 score += 10;
                 
-                // Replace the completed question with a new one
-                questions[currentQuestionIndex] = generateNewQuestion();
+                // Remove the answered question from the array
+                questions.splice(currentQuestionIndex, 1);
                 
-                // Move to the next question
-                currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+                // Add a new question to replace the removed one
+                questions.push(generateNewQuestion());
+                
+                // Create a ball for the new question immediately after adding it
+                const newQuestion = questions[questions.length - 1]; // The question we just added
+                createBallWithAnswer(newQuestion.answer);
+                
+                // Shuffle the questions array
+                shuffleArray(questions);
+                
+                // Set current question index to 0 (first item after shuffle)
+                currentQuestionIndex = 0;
                 
                 // Update the display
                 updateQuestionDisplay();
                 
                 // Update data model view immediately after state change
                 updateDataModelView();
-                
-                // Schedule a respawn of all balls
-                needToRespawnBalls = true;
-                respawnTimer = RESPAWN_DELAY;
             }
             
             // Update player stats
@@ -875,15 +863,6 @@ function gameLoop(timestamp) {
     // Update physics world
     world.Step(1 / 60, 8, 3);
     world.ClearForces();
-    
-    // Check if we need to respawn balls
-    if (needToRespawnBalls) {
-        respawnTimer -= 16.67; // Approximate time between frames at 60fps
-        
-        if (respawnTimer <= 0) {
-            spawnInitialBalls();
-        }
-    }
     
     // Draw all balls
     balls.forEach(drawBall);
