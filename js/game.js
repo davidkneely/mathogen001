@@ -386,6 +386,30 @@ function createBallWithAnswer(answer) {
     });
 }
 
+// Create a ball at a specific location
+function createBallAtLocation(answer, x, y) {
+    // Create ball body
+    const bodyDef = new b2BodyDef();
+    bodyDef.type = b2Body.b2_dynamicBody;
+    bodyDef.position.Set(x / SCALE, y / SCALE);
+    
+    const fixDef = new b2FixtureDef();
+    fixDef.shape = new b2CircleShape(BALL_RADIUS / SCALE);
+    fixDef.density = 1.0;
+    fixDef.friction = 0.3;
+    fixDef.restitution = 0.6;
+    
+    const body = world.CreateBody(bodyDef);
+    body.CreateFixture(fixDef);
+    
+    // Add ball to array
+    balls.push({
+        body: body,
+        answer: answer,
+        color: getRandomColor()
+    });
+}
+
 // Get a random color for the ball
 function getRandomColor() {
     const colors = [
@@ -557,6 +581,20 @@ function handleClick(event) {
                 
                 // Update the display
                 updateQuestionDisplay();
+                
+                // Update data model view immediately after state change
+                updateDataModelView();
+            } else {
+                // Wrong answer clicked - create a new ball at the click location
+                const clickX = (event.clientX - rect.left);
+                const clickY = (event.clientY - rect.top);
+                
+                // Add a new question to the array
+                questions.push(generateNewQuestion());
+                
+                // Create a ball for the new question at the click location
+                const newQuestion = questions[questions.length - 1];
+                createBallAtLocation(newQuestion.answer, clickX, clickY);
                 
                 // Update data model view immediately after state change
                 updateDataModelView();
