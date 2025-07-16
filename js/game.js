@@ -858,7 +858,7 @@ function updatePerformanceGraph() {
     const graphContainer = document.getElementById('performance-graph');
     if (!graphContainer) return;
     
-    // Clear previous graph
+    // Clear previous content
     graphContainer.innerHTML = '';
     
     // If no history, show a message
@@ -867,48 +867,94 @@ function updatePerformanceGraph() {
         return;
     }
     
-    // Calculate container dimensions
-    const containerWidth = graphContainer.parentElement.clientWidth - 20; // Subtract padding
-    const containerHeight = graphContainer.parentElement.clientHeight - 60; // Subtract space for legend and title
+    // Count questions by frequency and correctness
+    const questionStats = {};
     
-    // Calculate bar width based on available space and history items
-    const barWidth = Math.min(30, (containerWidth / playerStats.history.length) - 8);
-    
-    // Create bars for each history item
-    playerStats.history.forEach((item, index) => {
-        const bar = document.createElement('div');
-        bar.className = `graph-bar ${item.isCorrect ? 'correct' : 'incorrect'}`;
-        
-        // Set bar height (taller for correct answers)
-        const barHeight = item.isCorrect ? containerHeight * 0.8 : containerHeight * 0.5;
-        bar.style.height = `${barHeight}px`;
-        bar.style.width = `${barWidth}px`;
-        
-        // Position the bar
-        bar.style.position = 'absolute';
-        bar.style.bottom = '0';
-        bar.style.left = `${(index * (barWidth + 8)) + 4}px`; // Space bars evenly
-        
-        // Add a label with the operation symbol
-        const label = document.createElement('div');
-        label.className = 'graph-bar-label';
-        
-        let symbol = '';
-        switch (item.operation) {
-            case 'addition': symbol = '+'; break;
-            case 'subtraction': symbol = '-'; break;
-            case 'multiplication': symbol = '×'; break;
-            case 'division': symbol = '÷'; break;
+    playerStats.history.forEach(item => {
+        if (!questionStats[item.question]) {
+            questionStats[item.question] = {
+                question: item.question,
+                correct: 0,
+                incorrect: 0,
+                total: 0
+            };
         }
         
-        label.textContent = symbol;
-        bar.appendChild(label);
-        
-        // Add tooltip with question details
-        bar.title = `Question: ${item.question}\nYour answer: ${item.answer}\nResult: ${item.isCorrect ? 'Correct' : 'Incorrect'}`;
-        
-        graphContainer.appendChild(bar);
+        questionStats[item.question].total++;
+        if (item.isCorrect) {
+            questionStats[item.question].correct++;
+        } else {
+            questionStats[item.question].incorrect++;
+        }
     });
+    
+    // Convert to arrays and sort
+    const questionsArray = Object.values(questionStats);
+    
+    // Most frequently missed questions (highest incorrect count)
+    const mostMissed = [...questionsArray]
+        .filter(q => q.incorrect > 0)
+        .sort((a, b) => b.incorrect - a.incorrect)
+        .slice(0, 5);
+    
+    // Most frequently correct questions (highest correct count)
+    const mostCorrect = [...questionsArray]
+        .filter(q => q.correct > 0)
+        .sort((a, b) => b.correct - a.correct)
+        .slice(0, 5);
+    
+    // Create the display
+    let html = '<div style="display: flex; gap: 20px; height: 100%;">';
+    
+    // Most missed questions
+    html += '<div style="flex: 1;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #F44336;">Most Frequently Missed</h4>';
+    
+    if (mostMissed.length === 0) {
+        html += '<div style="color: #666; font-style: italic;">No missed questions yet!</div>';
+    } else {
+        html += '<div style="font-size: 12px;">';
+        mostMissed.forEach((item, index) => {
+            const accuracy = Math.round((item.correct / item.total) * 100);
+            html += `
+                <div style="margin-bottom: 8px; padding: 5px; background: #ffebee; border-radius: 4px;">
+                    <div style="font-weight: bold;">${item.question}</div>
+                    <div style="color: #666;">
+                        Correct: ${item.correct} | Incorrect: ${item.incorrect} | Accuracy: ${accuracy}%
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+    html += '</div>';
+    
+    // Most correct questions
+    html += '<div style="flex: 1;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #4CAF50;">Most Frequently Correct</h4>';
+    
+    if (mostCorrect.length === 0) {
+        html += '<div style="color: #666; font-style: italic;">No correct questions yet!</div>';
+    } else {
+        html += '<div style="font-size: 12px;">';
+        mostCorrect.forEach((item, index) => {
+            const accuracy = Math.round((item.correct / item.total) * 100);
+            html += `
+                <div style="margin-bottom: 8px; padding: 5px; background: #e8f5e8; border-radius: 4px;">
+                    <div style="font-weight: bold;">${item.question}</div>
+                    <div style="color: #666;">
+                        Correct: ${item.correct} | Incorrect: ${item.incorrect} | Accuracy: ${accuracy}%
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+    html += '</div>';
+    
+    html += '</div>';
+    
+    graphContainer.innerHTML = html;
 }
 
 // Save player stats to localStorage
