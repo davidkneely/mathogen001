@@ -21,7 +21,8 @@ const gameSettings = {
     maxNumber: 10,
     questionCount: 7,
     ballSize: 41,
-    gravity: 10
+    gravity: 10,
+    numberToWin: 7
 };
 
 // Player stats
@@ -56,6 +57,9 @@ let questions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let lastDataUpdateTime = 0;
+let correctAnswersCount = 0;
+let gameWon = false;
+let confettiParticles = [];
 
 // Initialize the game
 function init() {
@@ -95,6 +99,11 @@ function init() {
     // Initialize toggle button
     initializeToggleButton();
     
+    // Reset game state
+    correctAnswersCount = 0;
+    gameWon = false;
+    confettiParticles = [];
+    
     // Start the game loop
     requestAnimationFrame(gameLoop);
     
@@ -120,6 +129,9 @@ function initializeSettingsUI() {
     document.getElementById('gravity').value = gameSettings.gravity;
     document.getElementById('gravity-value').textContent = gameSettings.gravity;
     
+    document.getElementById('number-to-win').value = gameSettings.numberToWin;
+    document.getElementById('number-to-win-value').textContent = gameSettings.numberToWin;
+    
     // Add event listeners for sliders
     document.getElementById('ball-size').addEventListener('input', function() {
         document.getElementById('ball-size-value').textContent = this.value;
@@ -127,6 +139,10 @@ function initializeSettingsUI() {
     
     document.getElementById('gravity').addEventListener('input', function() {
         document.getElementById('gravity-value').textContent = this.value;
+    });
+    
+    document.getElementById('number-to-win').addEventListener('input', function() {
+        document.getElementById('number-to-win-value').textContent = this.value;
     });
     
     // Add event listeners for buttons
@@ -169,6 +185,7 @@ function applySettings() {
     gameSettings.questionCount = parseInt(document.getElementById('question-count').value);
     gameSettings.ballSize = parseInt(document.getElementById('ball-size').value);
     gameSettings.gravity = parseInt(document.getElementById('gravity').value);
+    gameSettings.numberToWin = parseInt(document.getElementById('number-to-win').value);
     
     // Apply settings to game variables
     QUESTION_COUNT = gameSettings.questionCount;
@@ -201,6 +218,7 @@ function resetSettings() {
     gameSettings.questionCount = 7;
     gameSettings.ballSize = 41;
     gameSettings.gravity = 10;
+    gameSettings.numberToWin = 7;
     
     // Update UI
     document.getElementById('addition').checked = true;
@@ -214,6 +232,8 @@ function resetSettings() {
     document.getElementById('ball-size-value').textContent = 41;
     document.getElementById('gravity').value = 10;
     document.getElementById('gravity-value').textContent = 10;
+    document.getElementById('number-to-win').value = 7;
+    document.getElementById('number-to-win-value').textContent = 7;
     
     // Apply these settings
     applySettings();
@@ -410,6 +430,134 @@ function createBallAtLocation(answer, x, y) {
     });
 }
 
+// Create confetti particles
+function createConfetti() {
+    for (let i = 0; i < 100; i++) {
+        confettiParticles.push({
+            x: Math.random() * CANVAS_WIDTH,
+            y: -10,
+            vx: (Math.random() - 0.5) * 8,
+            vy: Math.random() * 3 + 2,
+            color: getRandomColor(),
+            size: Math.random() * 4 + 2
+        });
+    }
+}
+
+// Update and draw confetti
+function updateConfetti() {
+    for (let i = confettiParticles.length - 1; i >= 0; i--) {
+        const particle = confettiParticles[i];
+        
+        // Update position
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.vy += 0.1; // gravity
+        
+        // Remove particles that are off screen
+        if (particle.y > CANVAS_HEIGHT + 10) {
+            confettiParticles.splice(i, 1);
+        }
+    }
+}
+
+// Draw confetti
+function drawConfetti() {
+    confettiParticles.forEach(particle => {
+        ctx.fillStyle = particle.color;
+        ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+    });
+}
+
+// Show play again button
+function showPlayAgainButton() {
+    const gameArea = document.getElementById('game-area');
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'win-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+    `;
+    
+    // Create win message
+    const winMessage = document.createElement('h2');
+    winMessage.textContent = 'Congratulations! You Won!';
+    winMessage.style.cssText = `
+        color: white;
+        font-size: 36px;
+        margin-bottom: 20px;
+        text-align: center;
+    `;
+    
+    // Create play again button
+    const playAgainButton = document.createElement('button');
+    playAgainButton.textContent = 'Play Again';
+    playAgainButton.style.cssText = `
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.3s;
+    `;
+    
+    playAgainButton.addEventListener('mouseenter', () => {
+        playAgainButton.style.background = '#45a049';
+    });
+    
+    playAgainButton.addEventListener('mouseleave', () => {
+        playAgainButton.style.background = '#4CAF50';
+    });
+    
+    playAgainButton.addEventListener('click', resetGame);
+    
+    overlay.appendChild(winMessage);
+    overlay.appendChild(playAgainButton);
+    gameArea.appendChild(overlay);
+}
+
+// Reset the game
+function resetGame() {
+    // Remove win overlay
+    const overlay = document.getElementById('win-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+    
+    // Reset game state
+    correctAnswersCount = 0;
+    gameWon = false;
+    score = 0;
+    confettiParticles = [];
+    
+    // Clear all balls
+    clearAllBalls();
+    
+    // Generate new questions
+    generateQuestions();
+    currentQuestionIndex = 0;
+    
+    // Update displays
+    updateQuestionDisplay();
+    updateDataModelView();
+    
+    // Spawn initial balls
+    spawnInitialBalls();
+}
+
 // Get a random color for the ball
 function getRandomColor() {
     const colors = [
@@ -560,8 +708,17 @@ function handleClick(event) {
                 world.DestroyBody(ball.body);
                 balls.splice(i, 1);
                 
-                // Increase score
+                // Increase score and correct answers count
                 score += 10;
+                correctAnswersCount++;
+                
+                // Check for win condition
+                if (correctAnswersCount >= gameSettings.numberToWin) {
+                    gameWon = true;
+                    createConfetti();
+                    showPlayAgainButton();
+                    return; // Stop processing this click
+                }
                 
                 // Remove the answered question from the array
                 questions.splice(currentQuestionIndex, 1);
@@ -904,6 +1061,12 @@ function gameLoop(timestamp) {
     
     // Draw all balls
     balls.forEach(drawBall);
+    
+    // Update and draw confetti if game is won
+    if (gameWon) {
+        updateConfetti();
+        drawConfetti();
+    }
     
     // Update data model view periodically
     if (timestamp - lastDataUpdateTime > DATA_UPDATE_INTERVAL) {
