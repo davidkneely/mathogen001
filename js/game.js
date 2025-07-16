@@ -1,7 +1,7 @@
 // Game constants - default values, can be changed via settings
 let CANVAS_WIDTH = 800;
 let CANVAS_HEIGHT = 600;
-let BALL_RADIUS = 41;
+let BALL_RADIUS = 50;
 let GRAVITY = 10;
 let QUESTION_COUNT = 7;
 const SCALE = 30; // Box2D works in meters, we need to convert to pixels
@@ -20,9 +20,11 @@ const gameSettings = {
     minNumber: 1,
     maxNumber: 10,
     questionCount: 7,
-    ballSize: 41,
+    ballSize: 50,
     gravity: 10,
-    numberToWin: 7
+    numberToWin: 7,
+    soundEnabled: true,
+    confettiEnabled: true
 };
 
 // Player stats
@@ -60,6 +62,7 @@ let lastDataUpdateTime = 0;
 let correctAnswersCount = 0;
 let gameWon = false;
 let confettiParticles = [];
+let cameraShake = { x: 0, y: 0, intensity: 0, duration: 0 };
 
 // Initialize the game
 function init() {
@@ -132,6 +135,9 @@ function initializeSettingsUI() {
     document.getElementById('number-to-win').value = gameSettings.numberToWin;
     document.getElementById('number-to-win-value').textContent = gameSettings.numberToWin;
     
+    document.getElementById('sound-enabled').checked = gameSettings.soundEnabled;
+    document.getElementById('confetti-enabled').checked = gameSettings.confettiEnabled;
+    
     // Add event listeners for sliders
     document.getElementById('ball-size').addEventListener('input', function() {
         document.getElementById('ball-size-value').textContent = this.value;
@@ -186,6 +192,8 @@ function applySettings() {
     gameSettings.ballSize = parseInt(document.getElementById('ball-size').value);
     gameSettings.gravity = parseInt(document.getElementById('gravity').value);
     gameSettings.numberToWin = parseInt(document.getElementById('number-to-win').value);
+    gameSettings.soundEnabled = document.getElementById('sound-enabled').checked;
+    gameSettings.confettiEnabled = document.getElementById('confetti-enabled').checked;
     
     // Apply settings to game variables
     QUESTION_COUNT = gameSettings.questionCount;
@@ -216,9 +224,11 @@ function resetSettings() {
     gameSettings.minNumber = 1;
     gameSettings.maxNumber = 10;
     gameSettings.questionCount = 7;
-    gameSettings.ballSize = 41;
+    gameSettings.ballSize = 50;
     gameSettings.gravity = 10;
     gameSettings.numberToWin = 7;
+    gameSettings.soundEnabled = true;
+    gameSettings.confettiEnabled = true;
     
     // Update UI
     document.getElementById('addition').checked = true;
@@ -228,12 +238,14 @@ function resetSettings() {
     document.getElementById('min-number').value = 1;
     document.getElementById('max-number').value = 10;
     document.getElementById('question-count').value = 7;
-    document.getElementById('ball-size').value = 41;
-    document.getElementById('ball-size-value').textContent = 41;
+    document.getElementById('ball-size').value = 50;
+    document.getElementById('ball-size-value').textContent = 50;
     document.getElementById('gravity').value = 10;
     document.getElementById('gravity-value').textContent = 10;
     document.getElementById('number-to-win').value = 7;
     document.getElementById('number-to-win-value').textContent = 7;
+    document.getElementById('sound-enabled').checked = true;
+    document.getElementById('confetti-enabled').checked = true;
     
     // Apply these settings
     applySettings();
@@ -441,6 +453,94 @@ function createConfetti() {
             color: getRandomColor(),
             size: Math.random() * 4 + 2
         });
+    }
+}
+
+// Create confetti explosion at specific location
+function createConfettiExplosion(x, y) {
+    if (!gameSettings.confettiEnabled) return;
+    
+    for (let i = 0; i < 50; i++) {
+        confettiParticles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 12,
+            vy: (Math.random() - 0.5) * 12,
+            color: getRandomColor(),
+            size: Math.random() * 6 + 3
+        });
+    }
+}
+
+// Play popping sound
+function playPopSound() {
+    if (!gameSettings.soundEnabled) return;
+    
+    // Create audio context for sound generation
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    // Connect nodes
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Set up the pop sound
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    // Play the sound
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+}
+
+// Play a muffled click sound for wrong answers
+function playMuffledClickSound() {
+    if (!gameSettings.soundEnabled) return;
+    
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.05);
+    
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.005, audioContext.currentTime + 0.05);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.05);
+}
+
+// Trigger camera shake
+function triggerCameraShake(intensity = 5, duration = 300) {
+    cameraShake.intensity = intensity;
+    cameraShake.duration = duration;
+    cameraShake.x = 0;
+    cameraShake.y = 0;
+}
+
+// Update camera shake
+function updateCameraShake() {
+    if (cameraShake.duration > 0) {
+        cameraShake.duration -= 16.67; // Approximate time between frames at 60fps
+        
+        if (cameraShake.duration > 0) {
+            // Generate random shake offset
+            cameraShake.x = (Math.random() - 0.5) * cameraShake.intensity;
+            cameraShake.y = (Math.random() - 0.5) * cameraShake.intensity;
+        } else {
+            // Reset shake when duration is over
+            cameraShake.x = 0;
+            cameraShake.y = 0;
+            cameraShake.intensity = 0;
+        }
     }
 }
 
@@ -704,6 +804,15 @@ function handleClick(event) {
             const isCorrect = ball.answer === correctAnswer;
             
             if (isCorrect) {
+                // Get ball position for confetti explosion
+                const ballPos = ball.body.GetPosition();
+                const ballX = ballPos.x * SCALE;
+                const ballY = ballPos.y * SCALE;
+                
+                // Play pop sound and create confetti explosion
+                playPopSound();
+                createConfettiExplosion(ballX, ballY);
+                
                 // Remove the ball
                 world.DestroyBody(ball.body);
                 balls.splice(i, 1);
@@ -745,6 +854,10 @@ function handleClick(event) {
                 // Wrong answer clicked - create a new ball at the click location
                 const clickX = (event.clientX - rect.left);
                 const clickY = (event.clientY - rect.top);
+                
+                // Play muffled click sound and trigger camera shake
+                playMuffledClickSound();
+                triggerCameraShake(3, 200); // Mild shake for wrong answers
                 
                 // Add a new question to the array
                 questions.push(generateNewQuestion());
@@ -1079,9 +1192,13 @@ function drawBall(ball) {
     const x = position.x * SCALE;
     const y = position.y * SCALE;
     
+    // Apply camera shake
+    const finalX = x + cameraShake.x;
+    const finalY = y + cameraShake.y;
+
     // Draw the ball
     ctx.beginPath();
-    ctx.arc(x, y, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.arc(finalX, finalY, BALL_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = ball.color;
     ctx.fill();
     ctx.strokeStyle = '#000';
@@ -1093,7 +1210,7 @@ function drawBall(ball) {
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(ball.answer, x, y);
+    ctx.fillText(ball.answer, finalX, finalY);
 }
 
 // Main game loop
@@ -1104,12 +1221,19 @@ function gameLoop(timestamp) {
     // Update physics world
     world.Step(1 / 60, 8, 3);
     world.ClearForces();
+
+    // Update camera shake
+    updateCameraShake();
     
     // Draw all balls
     balls.forEach(drawBall);
     
     // Update and draw confetti if game is won
     if (gameWon) {
+        updateConfetti();
+        drawConfetti();
+    } else {
+        // Update and draw confetti particles for ball explosions
         updateConfetti();
         drawConfetti();
     }
@@ -1125,4 +1249,4 @@ function gameLoop(timestamp) {
 }
 
 // Start the game when the page loads
-window.addEventListener('load', init); 
+window.addEventListener('load', init);
