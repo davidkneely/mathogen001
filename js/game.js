@@ -398,11 +398,11 @@ function createBallWithAnswer(answer) {
     // Set initial velocity
     body.SetLinearVelocity(new b2Vec2(vx, vy));
     
-    // Add ball to array
+    // Add ball to array with white color
     balls.push({
         body: body,
         answer: answer,
-        color: getRandomColor()
+        color: '#FFFFFF' // White color for all regular balls
     });
 }
 
@@ -422,11 +422,11 @@ function createBallAtLocation(answer, x, y) {
     const body = world.CreateBody(bodyDef);
     body.CreateFixture(fixDef);
     
-    // Add ball to array
+    // Add ball to array with red color (wrong answer ball)
     balls.push({
         body: body,
         answer: answer,
-        color: getRandomColor()
+        color: '#FF0000' // Red color for wrong answer balls
     });
 }
 
