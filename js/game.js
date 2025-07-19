@@ -728,24 +728,6 @@ function getRandomColor() {
 
 // Update the data model view
 function updateDataModelView() {
-    // Update current question
-    const currentQuestionDisplay = document.getElementById('current-question-display');
-    const currentQuestion = questions[currentQuestionIndex];
-    currentQuestionDisplay.innerHTML = `
-        <table>
-            <tr>
-                <th>Index</th>
-                <th>Question</th>
-                <th>Answer</th>
-            </tr>
-            <tr>
-                <td>${currentQuestionIndex}</td>
-                <td>${currentQuestion.question}</td>
-                <td>${currentQuestion.answer}</td>
-            </tr>
-        </table>
-    `;
-    
     // Update questions array
     const questionsArrayDisplay = document.getElementById('questions-array');
     let questionsHtml = `
@@ -777,60 +759,6 @@ function updateDataModelView() {
         <div class="data-item">
             <span class="data-label">Total Balls:</span>
             <span class="data-value">${balls.length}</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Answer Distribution:</span>
-        </div>
-    `;
-    
-    // Count balls by answer
-    const answerCounts = {};
-    balls.forEach(ball => {
-        if (!answerCounts[ball.answer]) {
-            answerCounts[ball.answer] = 0;
-        }
-        answerCounts[ball.answer]++;
-    });
-    
-    // Create table for answer distribution
-    let answerDistHtml = `
-        <table>
-            <tr>
-                <th>Answer</th>
-                <th>Count</th>
-                <th>Is Current Answer</th>
-            </tr>
-    `;
-    
-    for (const answer in answerCounts) {
-        const isCurrentAnswer = answer === currentQuestion.answer;
-        const isCurrentClass = isCurrentAnswer ? 'class="current-question"' : '';
-        answerDistHtml += `
-            <tr ${isCurrentClass}>
-                <td>${answer}</td>
-                <td>${answerCounts[answer]}</td>
-                <td>${isCurrentAnswer ? 'Yes' : 'No'}</td>
-            </tr>
-        `;
-    }
-    
-    answerDistHtml += '</table>';
-    ballsInfoDisplay.innerHTML += answerDistHtml;
-    
-    // Update game state
-    const gameStateDisplay = document.getElementById('game-state');
-    gameStateDisplay.innerHTML = `
-        <div class="data-item">
-            <span class="data-label">Score:</span>
-            <span class="data-value">${score}</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Need To Respawn:</span>
-            <span class="data-value">N/A</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Respawn Timer:</span>
-            <span class="data-value">N/A</span>
         </div>
     `;
 }
