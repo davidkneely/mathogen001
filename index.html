@@ -370,6 +370,35 @@
             color: white;
         }
         
+        /* Leaderboard button styles */
+        #leaderboard-button {
+            position: fixed;
+            top: 15px;
+            right: 115px;
+            z-index: 20;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+            font-size: 20px;
+            transition: background-color 0.3s ease;
+        }
+        
+        #leaderboard-button:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+        
+        #leaderboard-button.active {
+            background-color: #FFD700;
+            color: white;
+        }
+        
         /* Multiplayer overlay styles */
         #multiplayer-overlay {
             position: fixed;
@@ -519,6 +548,10 @@
     
     <button id="multiplayer-button" title="Play Multiplayer">
         👥
+    </button>
+    
+    <button id="leaderboard-button" title="View Leaderboard">
+        🏆
     </button>
     
     <button id="toggle-button" title="Toggle Settings">

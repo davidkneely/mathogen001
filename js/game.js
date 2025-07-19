@@ -41,6 +41,12 @@ const playerStats = {
     history: [] // Array of objects with { question, answer, isCorrect, operation }
 };
 
+// Leaderboard data
+const leaderboard = {
+    scores: [], // Array of { screenName, score, date, time }
+    currentPlayerName: null
+};
+
 // Box2D shortcuts for Box2DWeb
 const b2Vec2 = Box2D.Common.Math.b2Vec2;
 const b2BodyDef = Box2D.Dynamics.b2BodyDef;
@@ -101,6 +107,12 @@ function init() {
     
     // Initialize toggle button
     initializeToggleButton();
+    
+    // Initialize leaderboard button
+    initializeLeaderboardButton();
+    
+    // Load leaderboard data
+    loadLeaderboard();
     
     // Reset game state
     correctAnswersCount = 0;
@@ -578,6 +590,14 @@ function drawConfetti() {
 
 // Show play again button
 function showPlayAgainButton() {
+    // Check if this is a single-player game (not multiplayer)
+    if (!multiplayerGame || !multiplayerGame.isMultiplayerMode()) {
+        // Handle single-player game end with leaderboard
+        handleSinglePlayerGameEnd();
+        return;
+    }
+    
+    // Multiplayer game - show regular win overlay
     const gameArea = document.getElementById('game-area');
     
     // Create overlay
@@ -650,6 +670,18 @@ function resetGame() {
         opponentOverlay.remove();
     }
     
+    // Remove leaderboard overlay if it exists
+    const leaderboardOverlay = document.getElementById('leaderboard-overlay');
+    if (leaderboardOverlay) {
+        leaderboardOverlay.remove();
+    }
+    
+    // Remove player name input overlay if it exists
+    const playerNameOverlay = document.getElementById('player-name-overlay');
+    if (playerNameOverlay) {
+        playerNameOverlay.remove();
+    }
+    
     // Reset game state
     correctAnswersCount = 0;
     gameWon = false;
@@ -679,6 +711,9 @@ function resetGame() {
         // Reset multiplayer game state
         multiplayerGame.resetMultiplayerState();
     }
+    
+    // Remove leaderboard button active state
+    removeLeaderboardButtonActiveState();
 }
 
 // Get a random color for the ball
@@ -1211,6 +1246,32 @@ function initializeToggleButton() {
     }
 }
 
+// Initialize leaderboard button functionality
+function initializeLeaderboardButton() {
+    const leaderboardButton = document.getElementById('leaderboard-button');
+    
+    if (leaderboardButton) {
+        leaderboardButton.addEventListener('click', function() {
+            // Load leaderboard data
+            loadLeaderboard();
+            
+            // Show leaderboard overlay
+            showLeaderboardOverlay();
+            
+            // Add active state to button
+            leaderboardButton.classList.add('active');
+        });
+    }
+}
+
+// Function to remove leaderboard button active state
+function removeLeaderboardButtonActiveState() {
+    const leaderboardButton = document.getElementById('leaderboard-button');
+    if (leaderboardButton) {
+        leaderboardButton.classList.remove('active');
+    }
+}
+
 // Resize canvas to fit the game area - only called during initial setup, not when toggling panels
 function resizeCanvas() {
     if (canvas) {
@@ -1438,4 +1499,442 @@ function showOpponentWonOverlay(winner) {
     overlay.appendChild(message);
     overlay.appendChild(playAgainButton);
     gameArea.appendChild(overlay);
+}
+
+// Leaderboard functions
+function loadLeaderboard() {
+    try {
+        const savedLeaderboard = localStorage.getItem('mathogenLeaderboard');
+        if (savedLeaderboard) {
+            const parsed = JSON.parse(savedLeaderboard);
+            leaderboard.scores = parsed.scores || [];
+            leaderboard.currentPlayerName = parsed.currentPlayerName || null;
+        }
+    } catch (e) {
+        console.error('Failed to load leaderboard:', e);
+    }
+}
+
+function saveLeaderboard() {
+    try {
+        localStorage.setItem('mathogenLeaderboard', JSON.stringify(leaderboard));
+    } catch (e) {
+        console.error('Failed to save leaderboard:', e);
+    }
+}
+
+function addScoreToLeaderboard(screenName, score) {
+    const newScore = {
+        screenName: screenName,
+        score: score,
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString()
+    };
+    
+    leaderboard.scores.push(newScore);
+    
+    // Sort by score (highest first)
+    leaderboard.scores.sort((a, b) => b.score - a.score);
+    
+    // Keep only top 10 scores
+    if (leaderboard.scores.length > 10) {
+        leaderboard.scores = leaderboard.scores.slice(0, 10);
+    }
+    
+    // Save current player name for future games
+    leaderboard.currentPlayerName = screenName;
+    
+    saveLeaderboard();
+}
+
+function showLeaderboardOverlay() {
+    const gameArea = document.getElementById('game-area');
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'leaderboard-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+    `;
+    
+    // Create leaderboard container
+    const leaderboardContainer = document.createElement('div');
+    leaderboardContainer.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 90%;
+        text-align: center;
+        position: relative;
+    `;
+    
+    // Create close button
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+    `;
+    
+    closeButton.addEventListener('mouseenter', () => {
+        closeButton.style.backgroundColor = '#f0f0f0';
+    });
+    
+    closeButton.addEventListener('mouseleave', () => {
+        closeButton.style.backgroundColor = 'transparent';
+    });
+    
+    closeButton.addEventListener('click', () => {
+        overlay.remove();
+        removeLeaderboardButtonActiveState(); // Remove active state when closing
+    });
+    
+    // Create title
+    const title = document.createElement('h2');
+    title.textContent = '🏆 Leaderboard';
+    title.style.cssText = `
+        margin-top: 0;
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 28px;
+    `;
+    
+    // Create leaderboard table
+    const table = document.createElement('table');
+    table.style.cssText = `
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 16px;
+    `;
+    
+    // Create table header
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr style="background-color: #f2f2f2;">
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Rank</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Player</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Score</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Date</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    
+    if (leaderboard.scores.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="padding: 20px; text-align: center; color: #666; font-style: italic;">
+                    No scores yet. Be the first to set a record!
+                </td>
+            </tr>
+        `;
+    } else {
+        leaderboard.scores.forEach((score, index) => {
+            const row = document.createElement('tr');
+            const isCurrentPlayer = score.screenName === leaderboard.currentPlayerName;
+            
+            if (isCurrentPlayer) {
+                row.style.backgroundColor = '#e8f5e8';
+                row.style.fontWeight = 'bold';
+            }
+            
+            row.innerHTML = `
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">
+                    ${index + 1}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: left;">
+                    ${score.screenName}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: center; font-weight: bold;">
+                    ${score.score}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">
+                    ${score.date}
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    table.appendChild(tbody);
+    
+    // Create button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+    `;
+    
+    // Create play again button (only show if game is in progress)
+    if (gameWon || correctAnswersCount > 0) {
+        const playAgainButton = document.createElement('button');
+        playAgainButton.textContent = 'Play Again';
+        playAgainButton.style.cssText = `
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        `;
+        
+        playAgainButton.addEventListener('mouseenter', () => {
+            playAgainButton.style.background = '#45a049';
+        });
+        
+        playAgainButton.addEventListener('mouseleave', () => {
+            playAgainButton.style.background = '#4CAF50';
+        });
+        
+        playAgainButton.addEventListener('click', () => {
+            overlay.remove();
+            resetGame();
+        });
+        
+        buttonContainer.appendChild(playAgainButton);
+    }
+    
+    // Create close button for the bottom
+    const closeButtonBottom = document.createElement('button');
+    closeButtonBottom.textContent = 'Close';
+    closeButtonBottom.style.cssText = `
+        background: #666;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.3s;
+    `;
+    
+    closeButtonBottom.addEventListener('mouseenter', () => {
+        closeButtonBottom.style.background = '#555';
+    });
+    
+    closeButtonBottom.addEventListener('mouseleave', () => {
+        closeButtonBottom.style.background = '#666';
+    });
+    
+    closeButtonBottom.addEventListener('click', () => {
+        overlay.remove();
+        removeLeaderboardButtonActiveState(); // Remove active state when closing
+    });
+    
+    buttonContainer.appendChild(closeButtonBottom);
+    
+    leaderboardContainer.appendChild(closeButton);
+    leaderboardContainer.appendChild(title);
+    leaderboardContainer.appendChild(table);
+    leaderboardContainer.appendChild(buttonContainer);
+    overlay.appendChild(leaderboardContainer);
+    gameArea.appendChild(overlay);
+}
+
+function showPlayerNameInput() {
+    const gameArea = document.getElementById('game-area');
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'player-name-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+    `;
+    
+    // Create input container
+    const inputContainer = document.createElement('div');
+    inputContainer.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+    `;
+    
+    // Create title
+    const title = document.createElement('h2');
+    title.textContent = '🎉 Congratulations!';
+    title.style.cssText = `
+        margin-top: 0;
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 24px;
+    `;
+    
+    // Create score display
+    const scoreDisplay = document.createElement('p');
+    scoreDisplay.textContent = `Your Score: ${score}`;
+    scoreDisplay.style.cssText = `
+        font-size: 18px;
+        color: #4CAF50;
+        font-weight: bold;
+        margin-bottom: 20px;
+    `;
+    
+    // Create input label
+    const label = document.createElement('p');
+    label.textContent = 'Enter your name for the leaderboard:';
+    label.style.cssText = `
+        margin-bottom: 15px;
+        color: #666;
+    `;
+    
+    // Create input field
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Your name';
+    input.maxLength = 20;
+    input.style.cssText = `
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        box-sizing: border-box;
+        margin-bottom: 20px;
+    `;
+    
+    // Focus on input
+    setTimeout(() => input.focus(), 100);
+    
+    // Create save button
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save Score';
+    saveButton.style.cssText = `
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+        margin-right: 10px;
+    `;
+    
+    saveButton.addEventListener('mouseenter', () => {
+        saveButton.style.background = '#45a049';
+    });
+    
+    saveButton.addEventListener('mouseleave', () => {
+        saveButton.style.background = '#4CAF50';
+    });
+    
+    // Create skip button
+    const skipButton = document.createElement('button');
+    skipButton.textContent = 'Skip';
+    skipButton.style.cssText = `
+        background: #f44336;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+    `;
+    
+    skipButton.addEventListener('mouseenter', () => {
+        skipButton.style.background = '#da190b';
+    });
+    
+    skipButton.addEventListener('mouseleave', () => {
+        skipButton.style.background = '#f44336';
+    });
+    
+    // Handle save button click
+    const handleSave = () => {
+        const playerName = input.value.trim();
+        if (playerName) {
+            addScoreToLeaderboard(playerName, score);
+            overlay.remove();
+            showLeaderboardOverlay();
+        } else {
+            alert('Please enter your name');
+        }
+    };
+    
+    // Handle skip button click
+    const handleSkip = () => {
+        overlay.remove();
+        showLeaderboardOverlay();
+    };
+    
+    saveButton.addEventListener('click', handleSave);
+    skipButton.addEventListener('click', handleSkip);
+    
+    // Handle Enter key
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSave();
+        }
+    });
+    
+    inputContainer.appendChild(title);
+    inputContainer.appendChild(scoreDisplay);
+    inputContainer.appendChild(label);
+    inputContainer.appendChild(input);
+    inputContainer.appendChild(saveButton);
+    inputContainer.appendChild(skipButton);
+    overlay.appendChild(inputContainer);
+    gameArea.appendChild(overlay);
+}
+
+function handleSinglePlayerGameEnd() {
+    // Load leaderboard data
+    loadLeaderboard();
+    
+    // Check if player already has a saved name
+    if (leaderboard.currentPlayerName) {
+        // Use existing name and show leaderboard directly
+        addScoreToLeaderboard(leaderboard.currentPlayerName, score);
+        showLeaderboardOverlay();
+    } else {
+        // Ask for player name first
+        showPlayerNameInput();
+    }
 }
