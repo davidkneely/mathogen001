@@ -357,7 +357,14 @@ function createBox(x, y, width, height, isStatic) {
 // Update the question display
 function updateQuestionDisplay() {
     const questionElement = document.getElementById('question');
-    questionElement.textContent = `Question: ${questions[currentQuestionIndex].question}`;
+    
+    // Check if in multiplayer mode
+    if (multiplayerGame && multiplayerGame.isMultiplayerMode()) {
+        const playerInfo = multiplayerGame.getPlayerInfo();
+        questionElement.innerHTML = `Multiplayer - ${playerInfo.screenName}<br>Question: ${questions[currentQuestionIndex].question}`;
+    } else {
+        questionElement.textContent = `Question: ${questions[currentQuestionIndex].question}`;
+    }
     
     const scoreElement = document.getElementById('score');
     scoreElement.textContent = `Score: ${score}`;
@@ -637,6 +644,12 @@ function resetGame() {
         overlay.remove();
     }
     
+    // Remove opponent won overlay if it exists
+    const opponentOverlay = document.getElementById('opponent-won-overlay');
+    if (opponentOverlay) {
+        opponentOverlay.remove();
+    }
+    
     // Reset game state
     correctAnswersCount = 0;
     gameWon = false;
@@ -656,6 +669,16 @@ function resetGame() {
     
     // Spawn initial balls
     spawnInitialBalls();
+    
+    // If in multiplayer mode, reset multiplayer state
+    if (multiplayerGame && multiplayerGame.isMultiplayerMode()) {
+        // Reset multiplayer button state
+        const multiplayerButton = document.getElementById('multiplayer-button');
+        multiplayerButton.classList.remove('active');
+        
+        // Reset multiplayer game state
+        multiplayerGame.resetMultiplayerState();
+    }
 }
 
 // Get a random color for the ball
@@ -825,6 +848,12 @@ function handleClick(event) {
                 if (correctAnswersCount >= gameSettings.numberToWin) {
                     gameWon = true;
                     createConfetti();
+                    
+                    // Send game won message to opponent if in multiplayer
+                    if (multiplayerGame && multiplayerGame.isMultiplayerMode()) {
+                        multiplayerGame.sendGameWon();
+                    }
+                    
                     showPlayAgainButton();
                     return; // Stop processing this click
                 }
@@ -833,10 +862,15 @@ function handleClick(event) {
                 questions.splice(currentQuestionIndex, 1);
                 
                 // Add a new question to replace the removed one
-                questions.push(generateNewQuestion());
+                const newQuestion = generateNewQuestion();
+                questions.push(newQuestion);
+                
+                // Send the new question to opponent if in multiplayer mode
+                if (multiplayerGame && multiplayerGame.isMultiplayerMode()) {
+                    multiplayerGame.sendQuestionToOpponent(newQuestion.question, newQuestion.answer);
+                }
                 
                 // Create a ball for the new question immediately after adding it
-                const newQuestion = questions[questions.length - 1]; // The question we just added
                 createBallWithAnswer(newQuestion.answer);
                 
                 // Shuffle the questions array
@@ -1250,3 +1284,158 @@ function gameLoop(timestamp) {
 
 // Start the game when the page loads
 window.addEventListener('load', init);
+
+// Multiplayer integration functions
+function initMultiplayerGame() {
+    // Reset game state for multiplayer
+    correctAnswersCount = 0;
+    gameWon = false;
+    score = 0;
+    confettiParticles = [];
+    
+    // Clear all balls
+    clearAllBalls();
+    
+    // Generate new questions
+    generateQuestions();
+    currentQuestionIndex = 0;
+    
+    // Update displays
+    updateQuestionDisplay();
+    updateDataModelView();
+    
+    // Spawn initial balls
+    spawnInitialBalls();
+    
+    // Update game info to show multiplayer status
+    const questionElement = document.getElementById('question');
+    const playerInfo = multiplayerGame.getPlayerInfo();
+    questionElement.innerHTML = `Multiplayer - ${playerInfo.screenName}<br>Question: ${questions[currentQuestionIndex].question}`;
+}
+
+// Function called when receiving a question from opponent
+function addQuestionFromOpponent(question, answer, fromPlayer) {
+    // Add the question to our questions array
+    questions.push({
+        question: question,
+        answer: answer
+    });
+    
+    // Create a ball for the new question
+    createBallWithAnswer(answer);
+    
+    // Update data model view
+    updateDataModelView();
+    
+    // Show notification
+    showOpponentQuestionNotification(fromPlayer, question);
+}
+
+// Function called when opponent wins
+function handleOpponentWon(winner) {
+    // Show opponent won overlay
+    showOpponentWonOverlay(winner);
+}
+
+// Show notification when opponent adds a question
+function showOpponentQuestionNotification(fromPlayer, question) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #4CAF50;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        z-index: 1001;
+        font-size: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        animation: slideDown 0.5s ease-out;
+    `;
+    
+    notification.innerHTML = `<strong>${fromPlayer}</strong> added: ${question}`;
+    
+    // Add animation CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+        style.remove();
+    }, 3000);
+}
+
+// Show overlay when opponent wins
+function showOpponentWonOverlay(winner) {
+    const gameArea = document.getElementById('game-area');
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'opponent-won-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+    `;
+    
+    // Create message
+    const message = document.createElement('h2');
+    message.textContent = `${winner} won the game!`;
+    message.style.cssText = `
+        color: white;
+        font-size: 36px;
+        margin-bottom: 20px;
+        text-align: center;
+    `;
+    
+    // Create play again button
+    const playAgainButton = document.createElement('button');
+    playAgainButton.textContent = 'Play Again';
+    playAgainButton.style.cssText = `
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.3s;
+    `;
+    
+    playAgainButton.addEventListener('mouseenter', () => {
+        playAgainButton.style.background = '#45a049';
+    });
+    
+    playAgainButton.addEventListener('mouseleave', () => {
+        playAgainButton.style.background = '#4CAF50';
+    });
+    
+    playAgainButton.addEventListener('click', () => {
+        overlay.remove();
+        resetGame();
+    });
+    
+    overlay.appendChild(message);
+    overlay.appendChild(playAgainButton);
+    gameArea.appendChild(overlay);
+}

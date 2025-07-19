@@ -1,0 +1,16 @@
+{
+  "name": "mathogen-multiplayer",
+  "version": "1.0.0",
+  "description": "A multiplayer math game with physics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "keywords": ["game", "math", "multiplayer", "websocket"],
+  "author": "",
+  "license": "MIT"
+} 

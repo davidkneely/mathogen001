@@ -341,6 +341,154 @@
             transform: rotate(180deg);
         }
         
+        /* Multiplayer button styles */
+        #multiplayer-button {
+            position: fixed;
+            top: 15px;
+            right: 65px;
+            z-index: 20;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+            font-size: 20px;
+            transition: background-color 0.3s ease;
+        }
+        
+        #multiplayer-button:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+        
+        #multiplayer-button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        /* Multiplayer overlay styles */
+        #multiplayer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #multiplayer-modal {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        #multiplayer-modal h2 {
+            margin-top: 0;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        #player-name-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        #player-name-input:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        
+        #join-game-btn, #ready-btn, #leave-game-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        #join-game-btn:hover, #ready-btn:hover {
+            background-color: #45a049;
+        }
+        
+        #leave-game-btn {
+            background-color: #f44336;
+        }
+        
+        #leave-game-btn:hover {
+            background-color: #da190b;
+        }
+        
+        #players-list {
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        #players-ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        #players-ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #players-ul li:last-child {
+            border-bottom: none;
+        }
+        
+        .ready-status {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .waiting-status {
+            color: #ff9800;
+            font-style: italic;
+        }
+        
+        #countdown-screen {
+            text-align: center;
+        }
+        
+        #countdown-text {
+            font-size: 72px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 0;
+            animation: pulse 1s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
         /* Hide panels by default */
         .panels-hidden #data-model {
             margin-left: -300px;
@@ -369,9 +517,43 @@
         <p id="score">Score: 0</p>
     </div>
     
+    <button id="multiplayer-button" title="Play Multiplayer">
+        👥
+    </button>
+    
     <button id="toggle-button" title="Toggle Settings">
         ⚙️
     </button>
+    
+    <!-- Multiplayer UI Overlay -->
+    <div id="multiplayer-overlay" style="display: none;">
+        <div id="multiplayer-modal">
+            <h2>Multiplayer Game</h2>
+            
+            <!-- Player Name Input Screen -->
+            <div id="player-name-screen">
+                <p>Enter your screen name:</p>
+                <input type="text" id="player-name-input" placeholder="Your name" maxlength="20">
+                <button id="join-game-btn">Join Game</button>
+            </div>
+            
+            <!-- Waiting Room Screen -->
+            <div id="waiting-room-screen" style="display: none;">
+                <h3>Waiting Room</h3>
+                <div id="players-list">
+                    <p>Players:</p>
+                    <ul id="players-ul"></ul>
+                </div>
+                <button id="ready-btn">Ready</button>
+                <button id="leave-game-btn">Leave Game</button>
+            </div>
+            
+            <!-- Countdown Screen -->
+            <div id="countdown-screen" style="display: none;">
+                <h3 id="countdown-text">3</h3>
+            </div>
+        </div>
+    </div>
     
     <div id="game-container">
         <div id="data-model">
@@ -569,6 +751,9 @@
     
     <!-- Box2D physics library -->
     <script src="js/box2d.min.js"></script>
+    
+    <!-- Multiplayer functionality -->
+    <script src="js/multiplayer.js"></script>
     
     <!-- Game scripts -->
     <script src="js/game.js"></script>
